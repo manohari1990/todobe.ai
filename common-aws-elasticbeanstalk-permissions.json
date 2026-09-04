@@ -1,0 +1,106 @@
+[
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowCloudFormationForElasticBeanstalk",
+                "Effect": "Allow",
+                "Action": [
+                    "cloudformation:GetTemplate",
+                    "cloudformation:DescribeStacks",
+                    "cloudformation:DescribeStackEvents",
+                    "cloudformation:DescribeStackResource",
+                    "cloudformation:DescribeStackResources"
+                ],
+                "Resource": "*"
+            }
+        ]
+    },
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowEC2AutoScallingPolicy",
+                "Effect": "Allow",
+                "Action": [
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeAutoScalingInstances",
+                    "autoscaling:DescribeLaunchConfigurations",
+                    "autoscaling:DescribeScalingActivities",
+                    "autoscaling:DescribeTags",
+                    "autoscaling:SuspendProcesses",
+                    "autoscaling:ResumeProcesses"
+                ],
+                "Resource": "*"
+            }
+        ]
+    },
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowEC2TemplateDeployment",
+                "Effect": "Allow",
+                "Action": [
+                    "ec2:DescribeLaunchTemplates",
+                    "ec2:DescribeLaunchTemplateVersions"
+                ],
+                "Resource": "*"
+            }
+        ]
+    },
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "AllowEBDeployment",
+                "Effect": "Allow",
+                "Action": [
+                    "elasticbeanstalk:CreateApplicationVersion",
+                    "elasticbeanstalk:DescribeApplicationVersions",
+                    "elasticbeanstalk:DescribeEnvironments",
+                    "elasticbeanstalk:DescribeEvents",
+                    "elasticbeanstalk:UpdateEnvironment"
+                ],
+                "Resource": "*"
+            }
+        ]
+    },
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "Statement1",
+                "Effect": "Allow",
+                "Action": [
+                    "s3:CreateBucket",
+                    "s3:ListBucket",
+                    "s3:PutBucketOwnershipControls",
+                    "s3:GetBucketPolicy"
+                ],
+                "Resource": "arn:aws:s3:::elasticbeanstalk-ap-south-1-<ACCOUNT-ID>"
+            }
+        ]
+    },
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "Statement1",
+                "Effect": "Allow",
+                "Action": [
+                    "s3:GetObject",
+                    "s3:GetObjectAcl",
+                    "s3:GetObjectVersion",
+                    "s3:PutObject",
+                    "s3:PutObjectAcl",
+                    "s3:DeleteObject"
+                ],
+                "Resource": [
+                    "arn:aws:s3:::todofe.ai-<ACCOUNT-ID>-ap-south-1-an/*",
+                    "arn:aws:s3:::elasticbeanstalk-ap-south-1-<ACCOUNT-ID>/*"
+                ]
+            }
+        ]
+    }
+]

@@ -56,7 +56,7 @@ export const logRequest = async(req, res, next) =>{
 
 const getActiveLogFile = async() =>{
     try{
-        const filePath = `./${LOG_DIR}/app-${suffixName}`
+        const filePath = `./${LOG_DIR}/app-2026-08-23.log`
         const states = await fsPromises.stat(filePath)
         if(states)
             fileSize = states.size

@@ -24,8 +24,9 @@ export const userRegisterService = async (payload) => {
     const hashedPassword = await bcrypt.hash(payload.password, 10)
     const updatedPayload = {
         ...payload,
-        password: hashedPassword
+        password_hash: hashedPassword
     }
+    delete updatedPayload.password;
     try {
         const response = await userRegisterRepo(updatedPayload)
         return response 
