@@ -5,15 +5,17 @@ phases:
     runtime-versions:
       nodejs: 24
     commands:
-      - cd todobe.ai
       - npm ci
 
   build:
     commands:
       - echo "Node.js application build completed successfully!"
+  
+  post_build:
+    commands:
+      - echo "Build completed successfully"
 
 artifacts:
-  base-directory: todobe.ai
   files:
     - '**/*'
   exclude-paths:
