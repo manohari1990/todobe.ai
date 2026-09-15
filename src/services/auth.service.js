@@ -95,6 +95,7 @@ export const userLogoutService = async(cookies) =>{
 export const refreshAuthService = async(cookies)=>{
     try{
         const {sub, username} = await verifyToken(cookies.refresh_token, "refresh_token")
+        console.log(sub, username,"===============sub, username")
         if(sub){
             const sessions = await getUserById(sub)
             for(const session of sessions){

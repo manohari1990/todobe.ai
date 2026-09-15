@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { getAllTodos, getTodoById, saveTodo, updateTodo, deleteTodoById } from "../controllers/todo.controller.js";
+import { deleteTodoById, getAllTodos, getTodoById, saveTodo, updateTodo } from "../controllers/todo.controller.js";
 import { verifyRequestAuth } from "../middleware/authenticate.js";
-import { logRequest } from '../middleware/logging.js'
+import {logRequest} from '../middleware/logging.js';
 
 const todoRouter = Router()
 todoRouter.get('/', logRequest, verifyRequestAuth, getAllTodos)

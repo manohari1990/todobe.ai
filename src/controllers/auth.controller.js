@@ -127,6 +127,7 @@ export const userLogout = async(req, res) => {
 
 export const refreshAuthToken = async(req, res) =>{
     try{
+        console.log(req.cookies,"==============req.cookies")
         const response = await refreshAuthService(req.cookies)
         if(!response)
             return res.status(401).json({

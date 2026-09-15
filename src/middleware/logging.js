@@ -36,17 +36,14 @@ import fsPromises from "fs/promises";
 */
 
 const LOG_DIR = './logs';
-const MAX_FILE_SIZE = 10 //100 * 1024 * 1024;
-const TODAY = (new Date().toISOString()).split("T")[0];
+const MAX_FILE_SIZE = 1024*2 //100 * 1024 * 1024;
+// let fileVersion = 0
 
 export const logRequest = async(req, res, next) =>{
     const startTime = Date.now()
     res.on("finish", async()=>{
-        let filePath =  await getActiveLogFile();
-        const fileSizeCheck = await checkFileSize(filePath)
+        const filePath =  await getActiveLogFile();
         const logText = buildLogText(req, res, startTime)
-        if(!fileSizeCheck)
-            filePath = './logs/log2.txt'
         fs.appendFile(filePath, logText,(err)=>{
             if(err) console.error(err)
         })    // Non-bloking or Async method of file system
@@ -54,19 +51,33 @@ export const logRequest = async(req, res, next) =>{
     return next()
 }
 
-const getActiveLogFile = async() =>{
+const getActiveLogFile = async(version='') =>{
+    let fileSize = 0
+    const now = new Date()
+    const timeStamp = now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2,'0') + '-' +
+                    String(now.getDate()).padStart(2,'0');
+    const filePath = `${LOG_DIR}/app-${timeStamp}${version}.log`;
+    // console.log(filePath,"==============filePath1")// /logs/app-2026-09-14.log, /logs/app-2026-09-14-1.log
     try{
-        const filePath = `./${LOG_DIR}/app-2026-08-23.log`
-        const states = await fsPromises.stat(filePath)
-        if(states)
-            fileSize = states.size
+        const stats = await fsPromises.stat(filePath)
+        if (stats) fileSize = stats.size
+        // console.log(fileSize >= MAX_FILE_SIZE,"===================fileSize >= MAX_FILE_SIZE")
+        // if(fileSize >= MAX_FILE_SIZE){
+        //     fileVersion = fileVersion+1;
+        //     console.log(fileVersion,"==============fileVersion \n") // 1
+        //     return await getActiveLogFile(`-${fileVersion}`)
+        // }
+        return filePath
     }catch(err){
-         if(err !== 'ENOENT') throw err;
+        if(err !== 'ENOENT') {
+            // File doesn't exist → create it
+            await fsPromises.writeFile(filePath,'')
+            return filePath
+        }else{
+            throw err
+        }
     }
-    console.info(`File size is: ${fileSize}`)
-    if(fileSize >= MAX_FILE_SIZE)
-        return false
-    return true
 }
 
 
