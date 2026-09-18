@@ -1,12 +1,18 @@
 import { AppError } from '../config/AppError.js';
-import { userRegisterService, loginService, saveUserSessionService, userLogoutService, refreshAuthService } from '../services/auth.service.js'
+import { 
+    userRegisterService, 
+    loginService, 
+    saveUserSessionService, 
+    userLogoutService, 
+    refreshAuthService, 
+    forgotPasswordService } from '../services/auth.service.js'
 import { validationResult } from "express-validator";
-import {buildSessionMetadata} from '../utils/helpers.js'
+import { buildSessionMetadata } from '../utils/helpers.js'
 // import redisClient from '../cache/index.js'
 
 export const userRegister = async (req, res) => {
     const validationRes = validationResult(req)
-    if(!validationRes.isEmpty()){
+    if (!validationRes.isEmpty()) {
         return res.status(400).json({
             success: false,
             message: "Validation errors",
@@ -19,7 +25,7 @@ export const userRegister = async (req, res) => {
         const response = await userRegisterService(payload)
         return res.status(201).json(response)
     } catch (err) {
-        if(err instanceof AppError){
+        if (err instanceof AppError) {
             return res.status(err.statusCode).json({
                 success: false,
                 error: err.error,
@@ -35,21 +41,21 @@ export const userRegister = async (req, res) => {
 }
 
 
-export const userLogin = async(req, res) =>{
+export const userLogin = async (req, res) => {
     const validateRes = validationResult(req)       // express-validator method to validate the request body
-    if(!validateRes.isEmpty())
+    if (!validateRes.isEmpty())
         return res.status(400).json({
-                success: false,
-                message: "Validation errors",
-                error: validateRes.array()
-            })
-    try{
+            success: false,
+            message: "Validation errors",
+            error: validateRes.array()
+        })
+    try {
         const userRequestDetails = buildSessionMetadata(req)        // Extracts and returns user-agent properties
-        const {user, refresh_token, access_token} = await loginService(req.body)    // Perform fetching user based on username/email and returns user details and token
-        const user_session = await saveUserSessionService({...userRequestDetails, 'refresh_token_hash': refresh_token, 'user_id': user.user_id})    // Saves the new session into database with user-agent details and token & returns the new session details
-        const {password_hash, user_id, ...userData} = user
+        const { user, refresh_token, access_token } = await loginService(req.body)    // Perform fetching user based on username/email and returns user details and token
+        const user_session = await saveUserSessionService({ ...userRequestDetails, 'refresh_token_hash': refresh_token, 'user_id': user.user_id })    // Saves the new session into database with user-agent details and token & returns the new session details
+        const { password_hash, user_id, ...userData } = user
         res.cookie(
-            'access_token',access_token,
+            'access_token', access_token,
             {
                 'httpOnly': true,
                 'sameSite': 'lax',
@@ -58,7 +64,7 @@ export const userLogin = async(req, res) =>{
             }
         )
         res.cookie(
-            'refresh_token',refresh_token,
+            'refresh_token', refresh_token,
             {
                 'httpOnly': true,
                 'sameSite': 'lax',
@@ -72,9 +78,9 @@ export const userLogin = async(req, res) =>{
             message: "Login successfully!",
             records: [userData]
         })
-    }catch(err){
+    } catch (err) {
         console.log(err)
-        if(err instanceof AppError){
+        if (err instanceof AppError) {
             return res.status(err.statusCode).json({
                 success: false,
                 message: err.message,
@@ -82,7 +88,7 @@ export const userLogin = async(req, res) =>{
             })
         }
         return res.status(500).json({
-            success:false,
+            success: false,
             message: "Internal server error!",
             error: err
         })
@@ -90,14 +96,14 @@ export const userLogin = async(req, res) =>{
 }
 
 
-export const userLogout = async(req, res) => {
-    try{
-        console.log(req.cookies,"===========req.cookies")
+export const userLogout = async (req, res) => {
+    try {
+        console.log(req.cookies, "===========req.cookies")
         const response = await userLogoutService(req.cookies)   // returns neccessary session details after user session(refresh_token_hash) updated in DB
-        if(!response)
+        if (!response)
             return res.status(401).json({
                 success: false,
-                message:'Invalid Request'
+                message: 'Invalid Request'
             })
         res.clearCookie(
             'access_token',
@@ -121,7 +127,7 @@ export const userLogout = async(req, res) => {
             success: true,
             message: "User has been logout successfully!"
         })
-    } catch(err) {
+    } catch (err) {
         return res.status(500).json({
             success: false,
             message: 'Logout request failed!'
@@ -129,16 +135,16 @@ export const userLogout = async(req, res) => {
     }
 }
 
-export const refreshAuthToken = async(req, res) =>{
-    try{
+export const refreshAuthToken = async (req, res) => {
+    try {
         const response = await refreshAuthService(req.cookies)
-        if(!response)
+        if (!response)
             return res.status(401).json({
                 success: false,
                 message: "Unauthorised Request!"
             })
         res.cookie(
-            'access_token', 
+            'access_token',
             response,
             {
                 httpOnly: true,
@@ -151,7 +157,7 @@ export const refreshAuthToken = async(req, res) =>{
             success: true,
             message: "Token refreshed successfully!",
         })
-    }catch(err){        // handle 401 unauth
+    } catch (err) {        // handle 401 unauth
         res.status(500).json({
             success: false,
             message: "Internal server error!"
@@ -159,3 +165,19 @@ export const refreshAuthToken = async(req, res) =>{
     }
 }
 
+
+export const forgotPassword = async (req, res) => {
+    console.log(req.body,"==============body")
+    try{
+        const result = await forgotPasswordService(req.body)
+        return res.status(200).json({
+            success: true,
+            message: 'Reset password link is set to your email. Please check!'
+        })
+    }catch(err){
+        return res.status(500).json({
+            success: false,
+            message: 'Internal Server Error!'
+        })
+    }
+}

@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { userRegister, userLogin, userLogout, refreshAuthToken } from '../controllers/auth.controller.js';
+import { 
+    userRegister, 
+    userLogin, 
+    userLogout, 
+    refreshAuthToken, 
+    forgotPassword } from '../controllers/auth.controller.js';
 import { body } from "express-validator";
 
 const UserRegistrationRules = [
@@ -37,6 +42,7 @@ const authRouter = Router()
 authRouter.post('/register', UserRegistrationRules, userRegister)
 authRouter.post('/login', UserLoginRules, userLogin)
 authRouter.post('/logout', userLogout)
+authRouter.post('/forgotpassword', forgotPassword)
 authRouter.post('/refresh', refreshAuthToken)
 
 export default authRouter
