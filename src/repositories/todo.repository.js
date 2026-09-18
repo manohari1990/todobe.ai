@@ -8,7 +8,11 @@ export const allTodos = async(filters) =>{
     let sql = 'SELECT *, due_date::text AS due_date FROM user_todos '
     let countSql = 'SELECT COUNT(*) FROM user_todos'
     let totalRecords = 0
-    
+
+    if(filters.user_id){
+        conditions.push(` user_id = $${values.length + 1} `)
+        values.push(`${filters.user_id}`)
+    }
     if(filters.search){
         conditions.push(` ( title ILIKE $${values.length + 1} OR details ILIKE $${values.length + 1} ) `)
         values.push(`%${filters.search}%`)
@@ -26,11 +30,10 @@ export const allTodos = async(filters) =>{
         sql += " WHERE "+ conditions.join(" AND ")
     }
     
-    
     const sortBy = allowedSortFields.includes(filters.sortBy) ? filters.sortBy : DEFAULT_SORT_BY
     const order = filters.order?.toUpperCase() === 'ASC' ? 'ASC' : DEFAULT_ORDER
     sql += ` ORDER BY ${sortBy} ${order} `
-
+    
     if(filters.page){ // DEFAULT_PAGE_LIMIT
         countSql += conditions.length > 0 ? ` WHERE ${conditions.join(" AND ")}` : ''
         const dbRecordsCount = await query(countSql, values)

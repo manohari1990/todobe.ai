@@ -3,7 +3,7 @@ import { allTodosService, todoByIdService, saveTodoService, updateTodoService, d
 export const getAllTodos = async(req, res) =>{
     const filters = req.query;
     try{
-        const allTodos = await allTodosService(filters);
+        const allTodos = await allTodosService(filters, req.user);
         res.status(200).json(allTodos)
     }catch(error){
         console.error(error)
@@ -16,7 +16,7 @@ export const getAllTodos = async(req, res) =>{
 export const saveTodo = async(req, res) =>{
     const todoBody = req.body
     try{
-        const response = await saveTodoService(todoBody)
+        const response = await saveTodoService(todoBody, req.user)
         res.status(201).json(response)
     }catch(error){
         console.error(error)

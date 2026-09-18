@@ -2,6 +2,7 @@ import { AppError } from '../config/AppError.js';
 import { userRegisterService, loginService, saveUserSessionService, userLogoutService, refreshAuthService } from '../services/auth.service.js'
 import { validationResult } from "express-validator";
 import {buildSessionMetadata} from '../utils/helpers.js'
+// import redisClient from '../cache/index.js'
 
 export const userRegister = async (req, res) => {
     const validationRes = validationResult(req)
@@ -65,12 +66,14 @@ export const userLogin = async(req, res) =>{
                 'secure': false
             }
         )
+        console.log("Login successfully")
         return res.status(200).json({
             success: true,
             message: "Login successfully!",
             records: [userData]
         })
     }catch(err){
+        console.log(err)
         if(err instanceof AppError){
             return res.status(err.statusCode).json({
                 success: false,
@@ -89,6 +92,7 @@ export const userLogin = async(req, res) =>{
 
 export const userLogout = async(req, res) => {
     try{
+        console.log(req.cookies,"===========req.cookies")
         const response = await userLogoutService(req.cookies)   // returns neccessary session details after user session(refresh_token_hash) updated in DB
         if(!response)
             return res.status(401).json({
@@ -117,7 +121,7 @@ export const userLogout = async(req, res) => {
             success: true,
             message: "User has been logout successfully!"
         })
-    }catch(err){
+    } catch(err) {
         return res.status(500).json({
             success: false,
             message: 'Logout request failed!'
@@ -127,7 +131,6 @@ export const userLogout = async(req, res) => {
 
 export const refreshAuthToken = async(req, res) =>{
     try{
-        console.log(req.cookies,"==============req.cookies")
         const response = await refreshAuthService(req.cookies)
         if(!response)
             return res.status(401).json({
