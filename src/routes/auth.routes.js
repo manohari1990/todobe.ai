@@ -1,17 +1,19 @@
 import { Router } from "express";
-import { 
-    userRegister, 
-    userLogin, 
-    userLogout, 
-    refreshAuthToken, 
-    forgotPassword } from '../controllers/auth.controller.js';
+import {
+    userRegister,
+    userLogin,
+    userLogout,
+    refreshAuthToken,
+    forgotPassword,
+    resetPassword
+} from '../controllers/auth.controller.js';
 import { body } from "express-validator";
 
 const UserRegistrationRules = [
     body('username').notEmpty().withMessage("Username should not be empty.").bail()
         .isLength({ min: 6, max: 15 }).withMessage('username length should not less thatn 8 and more than 15 characters.').bail()
         .matches(/^[a-zA-Z0-9_]+$/).withMessage('Only alphanumeric values and underscores allowed!'),
-         // also provide special char validation
+    // also provide special char validation
     body('email').isEmail().withMessage('Please enter valid email.').normalizeEmail(),
 
     body('phone').optional().isMobilePhone("en-IN").withMessage('Please enter valid Phone number.'),
@@ -34,7 +36,7 @@ const UserRegistrationRules = [
 const UserLoginRules = [
     body('login').trim().notEmpty().withMessage("Please Enter Username or Email."),
     body('password').trim().notEmpty().withMessage("Please enter password.").bail()
-                    .isLength({min: 8}).withMessage("Please enter valid password.")
+        .isLength({ min: 8 }).withMessage("Please enter valid password.")
 ]
 
 const authRouter = Router()
@@ -42,7 +44,8 @@ const authRouter = Router()
 authRouter.post('/register', UserRegistrationRules, userRegister)
 authRouter.post('/login', UserLoginRules, userLogin)
 authRouter.post('/logout', userLogout)
-authRouter.post('/forgotpassword', forgotPassword)
 authRouter.post('/refresh', refreshAuthToken)
+authRouter.post('/forgotpassword', forgotPassword)
+authRouter.post('/resetpassword/:token', resetPassword)
 
 export default authRouter

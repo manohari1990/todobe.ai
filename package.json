@@ -13,9 +13,11 @@
   "type": "module",
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.1118.0",
+    "@aws-sdk/client-sesv2": "^3.1136.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "crypto": "^1.0.1",
     "device-detector-js": "^3.0.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

@@ -1,15 +1,20 @@
-import { 
-    userRegisterRepo, 
-    checkDuplicateUser, 
-    userLoginRepo, 
-    saveUserSessionRepo, 
-    getUserById, 
+import {
+    userRegisterRepo,
+    checkDuplicateUser,
+    userLoginRepo,
+    saveUserSessionRepo,
+    getUserById,
     updateUserSessionRepo,
-    setPasswordReset
- } from '../repositories/auth.repository.js'
+    setPasswordResetRepo,
+    compareTokensRepo,
+    updateUsersTableRepo,
+    updateResetPasswordTable
+} from '../repositories/auth.repository.js'
 import bcrypt from "bcrypt";
 import { AppError } from "../config/AppError.js"
 import { generateToken, verifyToken } from '../utils/jwt.js';
+import { SendEmail } from '../config/EmailService.js';
+import crypto from 'crypto';
 
 export const userRegisterService = async (payload) => {
     // Check duplicate - select query compare email, username, loop through the result and response back with existing username & email
@@ -66,18 +71,25 @@ export const loginService = async (payload) => {
     }
 }
 
-
-export const forgotPasswordService = async (payload) => {
-    try{
-        const response = await setPasswordReset(payload)
-        if(response.success){
-
+export const forgotPasswordService = async (request) => {
+    try {
+        const response = await setPasswordResetRepo(request.body)
+        if (response.success) {
+            const infoId = await SendEmail({
+                ...response.records,
+                ip_address: request.ip
+            }, "FORGOT_PASSWORD")
+            if(infoId){
+                return {
+                    success: true,
+                    message: 'Reset Password link sent to your registered email-id.'
+                }
+            }
         }
-    }catch(err){
+    } catch (err) {
         throw err
     }
 }
-
 
 export const saveUserSessionService = async (payload) => {
     const updatedPayload = {
@@ -95,11 +107,12 @@ export const saveUserSessionService = async (payload) => {
 
 export const userLogoutService = async (cookies) => {
     try {
-        const { sub, username } = verifyToken(cookies.access_token)   // extract the tokens from cookies and return sub/user_id & username
+        const { sub } = verifyToken(cookies.access_token)   // extract the tokens from cookies and return sub/user_id & username
         const sessions = await getUserById(sub)                     // return user session from DB based on sub/user_id
         if (sessions.length > 0) {
             for (const session of sessions) {
-                const isMatched = await bcrypt.compare(cookies.refresh_token, session.refresh_token_hash)
+                const isMatched = session.refresh_token_hash && cookies.refresh_token ? await bcrypt.compare(cookies.refresh_token, session.refresh_token_hash) : false
+                console.log(`isMatched: ${isMatched}`)
                 if (isMatched) {
                     const updatedSession = await updateUserSessionRepo(session.session_id)      // update the refresh_token_hash to null and returns the session details
                     return updatedSession
@@ -118,7 +131,7 @@ export const refreshAuthService = async (cookies) => {
         if (sub) {
             const sessions = await getUserById(sub)
             for (const session of sessions) {
-                const isMatched = await bcrypt.compare(cookies.refresh_token, session.refresh_token_hash)
+                const isMatched = session.refresh_token_hash && cookies.refresh_token ? await bcrypt.compare(cookies.refresh_token, session.refresh_token_hash) : false
                 if (isMatched) {
                     const { access_token } = await generateToken({ sub: sub, username: username })
                     return access_token
@@ -129,4 +142,38 @@ export const refreshAuthService = async (cookies) => {
     } catch (err) {
         throw err
     }
+}
+
+export const resetPasswordService = async (payload) => {
+    const hashedToken = crypto.createHash('sha256').update(payload.token).digest('hex')
+    try {
+        // get the actual token from db and compare it
+        const tokenData = await compareTokensRepo(hashedToken)
+        // Todo - check token expiry by comparing present datetime and tokanData expires_at
+        // Right now directly validating using SQL query but no proper handling in UI
+        if (!tokenData) {
+            return {
+                success: false,
+                message: 'Token might expired! Try forget password again.'
+            }
+        }
+        
+        // Hash password - using bcrypt convert the password into hash and append the it to the payload
+        const hashedPassword = await bcrypt.hash(payload.password, 10)
+        // update new password in users table
+        const updatedUserPassword = await updateUsersTableRepo({ password_hash: hashedPassword }, tokenData.user_id)
+        // then update the used_at in user_password_reset_tokens table
+        if (updatedUserPassword) {
+            const updatedUserResetPassword = await updateResetPasswordTable({ used_at: new Date(Date.now()) }, tokenData.reset_id)
+            if(updatedUserResetPassword){
+                return {
+                    success: true,
+                    message: 'Password updated!'
+                }
+            }
+        }
+    } catch (err) {
+        throw err
+    }
+
 }

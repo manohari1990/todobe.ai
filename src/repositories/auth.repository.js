@@ -1,5 +1,5 @@
 import { query } from '../config/database.js'
-import { buildInsertQuery } from '../utils/helpers.js'
+import { buildInsertQuery, buildUserResetPassUpdateQuery, buildUserUpdateQuery, generateTokenHash } from '../utils/helpers.js'
 import { NEW_UPDATE_USER_RETURN_FROM_DB } from '../Constant.js'
 
 export const userRegisterRepo = async (payload) => {
@@ -79,29 +79,68 @@ export const updateUserSessionRepo = async (sessionId) => {
     }
 }
 
-export const setPasswordReset = async (payload) => {
-    console.log(payload,"=====payload")
-    try{
-        const fetchUserSQL = `SELECT * FROM users WHERE email = $1 OR username = $1`
-        const fetchUser = await query(fetchUserSQL, [payload.user])
-        console.log(fetchUser.rows)
-        if(fetchUser.rows[0]){
-            const updateUserSQL = `UPDATE users SET reset_password_key = 12345 WHERE user_id = $1 RETURNING user_id, email, first_name, last_name, phone`
-            const res = await query(updateUserSQL, [payload.user])
+export const setPasswordResetRepo = async (payload) => {
+    try {
+        const fetchUserSQL = `SELECT ${NEW_UPDATE_USER_RETURN_FROM_DB.join(', ')} FROM users WHERE email = $1 OR username = $1`
+        const userRecord = await query(fetchUserSQL, [payload.user])
+        if (userRecord.rows[0]) {
+            const { resetToken, hashedToken } = generateTokenHash()
+            const resetPasswordRecord = {
+                user_id: userRecord.rows[0].user_id,
+                token_hash: hashedToken,
+                expires_at: new Date(Date.now() + 15 * 60 * 1000)   // 15 minutes
+            }
+            const { sql, values } = buildInsertQuery(resetPasswordRecord, "user_password_reset_tokens")
+            const userPasswordReset = await query(sql, values)
             return {
                 success: true,
                 message: 'Reset password initiated!',
-                records: res.rows[0]
+                records: {
+                    ...userPasswordReset.rows[0],
+                    ...userRecord.rows[0],
+                    resetToken: resetToken
+                }
             }
-        }else{
+        } else {
             return "User is not existed!"
         }
-    }catch(err){
+    } catch (err) {
         throw err
     }
-    
 }
 
+export const compareTokensRepo = async (hashedInput) => {
+    try {
+        const sql = `SELECT * FROM user_password_reset_tokens WHERE token_hash = $1 AND expires_at > current_timestamp AND used_at IS NULL`
+        const userPasswordResetRes = await query(sql, [hashedInput])
+        if (userPasswordResetRes.rowCount > 0) {
+            return userPasswordResetRes.rows[0]
+        }
+    } catch (err) {
+        throw err
+    }
+}
+
+export const updateUsersTableRepo = async (payload, id) => {
+    try {
+        const { sql, newValues } = buildUserUpdateQuery(id, payload, NEW_UPDATE_USER_RETURN_FROM_DB);
+        const response = await query(sql, newValues)
+        return response.rows[0]
+    } catch (err) {
+        throw err
+    }
+
+}
+
+export const updateResetPasswordTable = async (payload, id) => {
+    try {
+        const { sql, newValues } = buildUserResetPassUpdateQuery(id, payload)
+        const response = await query(sql, newValues)
+        return response.rows[0]
+    } catch (err) {
+        throw err
+    }
+}
 
 /**
  ** refresh query should conceptually validate all three **

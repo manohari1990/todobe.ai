@@ -1,31 +1,48 @@
 import DeviceDetector from 'device-detector-js';
+import crypto from 'crypto';
 
-function buildQuery(payload){
+function buildQuery(payload) {
     const columns = []
     const values = []
     const placeholders = []
     let count = 1
-    for(const key in payload){
+    for (const key in payload) {
         columns.push(key)
         values.push(payload[key])
         placeholders.push(`$${count++}`)
     }
-    return {columns, values, placeholders}
+    return { columns, values, placeholders }
 }
 
-export function buildInsertQuery(payload, tableName, returns){
-    const {columns, values, placeholders} = buildQuery(payload)
+export function buildInsertQuery(payload, tableName, returns) {
+    const { columns, values, placeholders } = buildQuery(payload)
     const sql = `INSERT INTO ${tableName}( ${columns.join(', ')} ) VALUES( ${placeholders.join(', ')} ) RETURNING ${returns ? returns.join(', ') : '*'}`
-    return {sql, values}
+    return { sql, values }
 }
 
 
-export function buildUpdateQuery(id, payload){
-    const {columns, values, placeholders} = buildQuery(payload)
+export function buildUpdateQuery(id, payload) {
+    const { columns, values, placeholders } = buildQuery(payload)
     const newValues = [...values, id]
-    const updateSet = columns.map((col,ind)=>  `${col}=${placeholders[ind]}`)
-    const sql = `UPDATE user_todos SET ${updateSet.join(', ')} WHERE todo_id = $${placeholders.length+1} RETURNING *`
-    return {sql, newValues}
+    const updateSet = columns.map((col, ind) => `${col}=${placeholders[ind]}`)
+    const sql = `UPDATE user_todos SET ${updateSet.join(', ')} WHERE todo_id = $${placeholders.length + 1} RETURNING *`
+    return { sql, newValues }
+}
+
+export function buildUserUpdateQuery(id, payload, returns) {
+    const { columns, values, placeholders } = buildQuery(payload)
+    const newValues = [...values, id]
+    const updateSet = columns.map((col, ind) => `${col}=${placeholders[ind]}`)
+    const sql = `UPDATE users SET ${updateSet.join(', ')} WHERE user_id = $${placeholders.length + 1} RETURNING ${returns ? returns.join(', ') : '*'}`
+    return { sql, newValues }
+}
+
+export function buildUserResetPassUpdateQuery(id, payload, returns) {
+    const { columns, values, placeholders } = buildQuery(payload)
+    const newValues = [...values, id]
+    const updateSet = columns.map((col, ind) => `${col}=${placeholders[ind]}`)
+    const sql = `UPDATE user_password_reset_tokens SET ${updateSet.join(', ')} WHERE reset_id = $${placeholders.length + 1} RETURNING ${returns ? returns.join(', ') : '*'}`
+    return { sql, newValues }
 }
 
 export const buildSessionMetadata = (request) => {
@@ -40,6 +57,12 @@ export const buildSessionMetadata = (request) => {
         browser: details.client?.name,
     }
     return userRequestFrom;
+}
+
+export const generateTokenHash = () => {
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest('hex')
+    return { resetToken, hashedToken }
 }
 
 // export const setCookies =(res, cookieTitle, cookieValue ) =>{

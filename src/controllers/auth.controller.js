@@ -1,11 +1,13 @@
 import { AppError } from '../config/AppError.js';
-import { 
-    userRegisterService, 
-    loginService, 
-    saveUserSessionService, 
-    userLogoutService, 
-    refreshAuthService, 
-    forgotPasswordService } from '../services/auth.service.js'
+import {
+    userRegisterService,
+    loginService,
+    saveUserSessionService,
+    userLogoutService,
+    refreshAuthService,
+    forgotPasswordService,
+    resetPasswordService
+} from '../services/auth.service.js'
 import { validationResult } from "express-validator";
 import { buildSessionMetadata } from '../utils/helpers.js'
 // import redisClient from '../cache/index.js'
@@ -98,7 +100,6 @@ export const userLogin = async (req, res) => {
 
 export const userLogout = async (req, res) => {
     try {
-        console.log(req.cookies, "===========req.cookies")
         const response = await userLogoutService(req.cookies)   // returns neccessary session details after user session(refresh_token_hash) updated in DB
         if (!response)
             return res.status(401).json({
@@ -165,19 +166,39 @@ export const refreshAuthToken = async (req, res) => {
     }
 }
 
-
 export const forgotPassword = async (req, res) => {
-    console.log(req.body,"==============body")
-    try{
-        const result = await forgotPasswordService(req.body)
-        return res.status(200).json({
-            success: true,
-            message: 'Reset password link is set to your email. Please check!'
-        })
-    }catch(err){
+    try {
+        const result = await forgotPasswordService(req)
+        if(!result.success){
+            return res.status(200).json({
+                success: false,
+                message: 'Something went wrong. Try again!'
+            })
+        }
+        return res.status(200).json(result)
+    } catch (err) {
         return res.status(500).json({
             success: false,
             message: 'Internal Server Error!'
+        })
+    }
+}
+
+export const resetPassword = async (req, res) => {
+    try {
+        const response = await resetPasswordService({
+            token: req.body.token,
+            password: req.body.password
+        })
+        if(!response.success){
+            return res.status(200).json(response)    
+        }
+        return res.status(200).json(response)
+    } catch (err) {
+        return res.status(500).json({
+            success: false,
+            message: 'Internal server error!',
+            error: err
         })
     }
 }
