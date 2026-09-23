@@ -8,7 +8,7 @@ export const userRegisterRepo = async (payload) => {
     // SQL to save new user
     try {
         const response = await query(sql, values)
-        return (response.rows.length > 0) ? {
+        return (response.rowCount > 0) ? {
             'success': true,
             'records': response.rows[0],
             'message': 'New user created successfully!'
@@ -21,6 +21,17 @@ export const userRegisterRepo = async (payload) => {
         if (err.code === '23505') {
             throw new AppError(409, 'Username or email already exists');
         }
+        throw err
+    }
+}
+
+export const userOAuthSaveRepo = async (userOAuthPayload) => {
+    const {sql, values} = buildInsertQuery(userOAuthPayload, 'user_oauth_accounts')
+    console.log(sql, values,"==================oauthinsert")
+    try{
+        const insterOAuthRecord = await query(sql, values)
+        return insterOAuthRecord.rowCount > 0 ? insterOAuthRecord.rows[0] : null
+    }catch(err){
         throw err
     }
 }
@@ -144,16 +155,16 @@ export const updateResetPasswordTable = async (payload, id) => {
 }
 
 export const checkEmailStatusRepo = async (userOAuthPayload, userDataPayload) => {
-    try{
+    try {
         let sql = `SELECT * FROM user_oauth_accounts WHERE provider_user_id = $1`
         const oauthReord = await query(sql, [userOAuthPayload.provider_user_id])
-        if(oauthReord.rowCount > 0){
+        if (oauthReord.rowCount > 0) {
             return oauthReord.rows[0];
-        }else{
+        } else {
             sql = `SELECT ${NEW_UPDATE_USER_RETURN_FROM_DB.join(', ')} FROM users WHERE email = $1`
             const userRecord = await query(sql, [userDataPayload.email])
-            if(userRecord.rowCount > 0){
-                const {sql, values} = buildInsertQuery({
+            if (userRecord.rowCount > 0) {
+                const { sql, values } = buildInsertQuery({
                     ...userOAuthPayload,
                     user_id: userRecord.rows[0].user_id
                 }, 'user_oauth_accounts')
@@ -162,11 +173,9 @@ export const checkEmailStatusRepo = async (userOAuthPayload, userDataPayload) =>
                     ...insertOAuthRecord.rows[0],
                     ...userRecord.rows[0]
                 };
-            }else{
-                // return register
             }
         }
-    }catch(err){
+    } catch (err) {
         throw err
     }
 }

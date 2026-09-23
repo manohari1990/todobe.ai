@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS users(
 CREATE TABLE IF NOT EXISTS user_oauth_accounts(
 	oauth_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
 	user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
-	provider_identifier VARCHAR(50) UNIQUE NOT NULL, -- google/github
+	provider_identifier VARCHAR(50) NOT NULL, -- google/github
 	provider_user_id VARCHAR(255) UNIQUE NOT NULL,
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 );

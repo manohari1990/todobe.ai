@@ -101,6 +101,8 @@ export const userLogin = async (req, res) => {
 export const googleAuthController = async (req, res) =>{
     try{
         const { user, refresh_token, access_token }  = await googleAuthService(req.body)
+        const userRequestDetails = buildSessionMetadata(req)
+        const user_session = await saveUserSessionService({ ...userRequestDetails, 'refresh_token_hash': refresh_token, 'user_id': user.user_id })  
         res.cookie(
             'access_token', access_token,
             {

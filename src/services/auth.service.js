@@ -9,7 +9,8 @@ import {
     compareTokensRepo,
     updateUsersTableRepo,
     updateResetPasswordTable,
-    checkEmailStatusRepo
+    checkEmailStatusRepo,
+    userOAuthSaveRepo
 } from '../repositories/auth.repository.js'
 import bcrypt from "bcrypt";
 import { AppError } from "../config/AppError.js"
@@ -206,6 +207,7 @@ export const googleAuthService = async(requestBody) =>{
         if(userOAuthPayload && payload.email_verified){
             const userResponse = await checkEmailStatusRepo(userOAuthPayload, userDataPayload)
             if (userResponse){
+                // user email is already existed
                 // generate jwt token
                 const {access_token, refresh_token} = generateToken({
                     sub: userResponse.user_id,
@@ -217,11 +219,29 @@ export const googleAuthService = async(requestBody) =>{
                     access_token
                 }
             }else{
-                // register new user
+                // user email is not existed - register as new user
                 const registerResp = await userRegisterRepo(userDataPayload)
-                return {
-                    records: registerResp
+                // console.log(registerResp.records,"=================registerResp")
+                if(registerResp.records){
+                    const newOAuthRecord = await userOAuthSaveRepo({
+                        ...userOAuthPayload,
+                        user_id: registerResp.records.user_id
+                    })
+                    // console.log(newOAuthRecord,"=================newOAuthRecord")
+                    if(newOAuthRecord){
+                        const {access_token, refresh_token} = generateToken({
+                            sub: registerResp.records.user_id,
+                            username: registerResp.records.username
+                        })
+                        // console.log(access_token,"=================access_token")
+                        return {
+                            user: registerResp.records,
+                            refresh_token,
+                            access_token
+                        }
+                    }
                 }
+                
             }
         }
     }catch(err){
