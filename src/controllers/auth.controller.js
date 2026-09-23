@@ -11,8 +11,7 @@ import {
 } from '../services/auth.service.js'
 import { validationResult } from "express-validator";
 import { buildSessionMetadata } from '../utils/helpers.js'
-import { OAuth2Client } from 'google-auth-library'
-// import redisClient from '../cache/index.js'
+
 
 export const userRegister = async (req, res) => {
     const validationRes = validationResult(req)

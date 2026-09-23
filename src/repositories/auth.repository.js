@@ -27,7 +27,6 @@ export const userRegisterRepo = async (payload) => {
 
 export const userOAuthSaveRepo = async (userOAuthPayload) => {
     const {sql, values} = buildInsertQuery(userOAuthPayload, 'user_oauth_accounts')
-    console.log(sql, values,"==================oauthinsert")
     try{
         const insterOAuthRecord = await query(sql, values)
         return insterOAuthRecord.rowCount > 0 ? insterOAuthRecord.rows[0] : null

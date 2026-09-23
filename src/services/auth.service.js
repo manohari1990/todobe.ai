@@ -18,7 +18,6 @@ import { generateToken, verifyToken } from '../utils/jwt.js';
 import { SendEmail } from '../config/EmailService.js';
 import crypto from 'crypto';
 import {OAuth2Client} from 'google-auth-library'
-import { access } from 'fs';
 
 export const userRegisterService = async (payload) => {
     // Check duplicate - select query compare email, username, loop through the result and response back with existing username & email
@@ -68,7 +67,6 @@ export const loginService = async (payload) => {
         sub: response.user_id,
         username: response.username
     })
-    // console.log(refresh_token, access_token,"=======================Tokens")
     return {
         user: response,
         refresh_token,
@@ -221,19 +219,16 @@ export const googleAuthService = async(requestBody) =>{
             }else{
                 // user email is not existed - register as new user
                 const registerResp = await userRegisterRepo(userDataPayload)
-                // console.log(registerResp.records,"=================registerResp")
                 if(registerResp.records){
                     const newOAuthRecord = await userOAuthSaveRepo({
                         ...userOAuthPayload,
                         user_id: registerResp.records.user_id
                     })
-                    // console.log(newOAuthRecord,"=================newOAuthRecord")
                     if(newOAuthRecord){
                         const {access_token, refresh_token} = generateToken({
                             sub: registerResp.records.user_id,
                             username: registerResp.records.username
                         })
-                        // console.log(access_token,"=================access_token")
                         return {
                             user: registerResp.records,
                             refresh_token,
