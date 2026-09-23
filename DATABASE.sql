@@ -42,7 +42,15 @@ CREATE TABLE IF NOT EXISTS users(
 	user_status user_statuses NOT NULL DEFAULT 'active',
 	created_at TIMESTAMPTZ DEFAULT current_timestamp,
 	updated_at TIMESTAMPTZ DEFAULT current_timestamp
-); 
+);
+
+CREATE TABLE IF NOT EXISTS user_oauth_accounts(
+	oauth_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+	user_id UUID NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
+	provider_identifier VARCHAR(50) UNIQUE NOT NULL, -- google/github
+	provider_user_id VARCHAR(255) UNIQUE NOT NULL,
+	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+);
 
 CREATE TABLE IF NOT EXISTS user_password_reset_tokens(
 	reset_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -121,3 +129,6 @@ ON user_sessions(user_id);
 -- Create the index for the foreign key refresh_token_hash in user_sessions
 CREATE UNIQUE INDEX idx_sessions_refresh_token_hash
 ON user_sessions(refresh_token_hash);
+-- Create index for the foreign key user_id and provider_identifier
+CREATE UNIQUE INDEX idx_oauth_user_account
+ON user_oauth_accounts(user_id, provider_identifier);

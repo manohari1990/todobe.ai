@@ -1,5 +1,6 @@
 node_modules
 pem
 dist
+logs
 .env
 todoapp.zip

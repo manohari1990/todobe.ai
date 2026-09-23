@@ -6,10 +6,12 @@ import {
     userLogoutService,
     refreshAuthService,
     forgotPasswordService,
-    resetPasswordService
+    resetPasswordService,
+    googleAuthService
 } from '../services/auth.service.js'
 import { validationResult } from "express-validator";
 import { buildSessionMetadata } from '../utils/helpers.js'
+import { OAuth2Client } from 'google-auth-library'
 // import redisClient from '../cache/index.js'
 
 export const userRegister = async (req, res) => {
@@ -41,7 +43,6 @@ export const userRegister = async (req, res) => {
         })
     }
 }
-
 
 export const userLogin = async (req, res) => {
     const validateRes = validationResult(req)       // express-validator method to validate the request body
@@ -97,6 +98,48 @@ export const userLogin = async (req, res) => {
     }
 }
 
+export const googleAuthController = async (req, res) =>{
+    try{
+        const { user, refresh_token, access_token }  = await googleAuthService(req.body)
+        res.cookie(
+            'access_token', access_token,
+            {
+                httpOnly: true,
+                sameSite: 'lax',
+                maxAge: process.env.JWT_ACCESS_COOKIE_MAX_AGE,
+                secure: false
+            }
+        )
+        res.cookie(
+            'refresh_token', refresh_token,
+            {
+                httpOnly: true,
+                sameSite: 'lax',
+                maxAge: process.env.JWT_REFRESH_COOKIE_MAX_AGE,
+                secure: false
+            }
+        )
+        return res.status(200).json({
+            success: true,
+            message: "Login Successfully!",
+            records: [user]
+        })
+    }catch(err){
+        if(err instanceof AppError){
+            return res.status(err.statusCode).json({
+                success: false,
+                error: err.error,
+                message: err.message
+            })
+        }
+        return res.status(500).json({
+            success: 500,
+            message: 'Internal server error',
+            error: err
+        })
+    }
+
+}
 
 export const userLogout = async (req, res) => {
     try {

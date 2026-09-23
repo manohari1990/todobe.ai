@@ -42,19 +42,21 @@ const poolOptions = isProd
                         port: connSecrets.DB_PORT,
                         ssl: {
                             rejectUnauthorized: false
-                        }
+                        },
+                        max:1
                     } : {
                         user: process.env.DB_USER,
                         host: process.env.DB_HOST,
                         database: process.env.DB_NAME,
                         password: process.env.DB_PASSWORD,
                         port: process.env.DB_PORT,
+                        max: 3
                     }
-const pool = new Pool(poolOptions)
+export const pool = new Pool(poolOptions)
 
 // Check DB connection
-pool.connect()
-    .then(() => console.log("PGSQL connected"))
-    .catch(err => console.error(err))
+// pool.connect()
+//     .then(() => console.log("PGSQL connected"))
+//     .catch(err => console.error(err))
 
 export const query = (text, params) => pool.query(text, params)

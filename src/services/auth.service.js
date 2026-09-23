@@ -8,13 +8,16 @@ import {
     setPasswordResetRepo,
     compareTokensRepo,
     updateUsersTableRepo,
-    updateResetPasswordTable
+    updateResetPasswordTable,
+    checkEmailStatusRepo
 } from '../repositories/auth.repository.js'
 import bcrypt from "bcrypt";
 import { AppError } from "../config/AppError.js"
 import { generateToken, verifyToken } from '../utils/jwt.js';
 import { SendEmail } from '../config/EmailService.js';
 import crypto from 'crypto';
+import {OAuth2Client} from 'google-auth-library'
+import { access } from 'fs';
 
 export const userRegisterService = async (payload) => {
     // Check duplicate - select query compare email, username, loop through the result and response back with existing username & email
@@ -49,6 +52,7 @@ export const userRegisterService = async (payload) => {
 }
 
 export const loginService = async (payload) => {
+    console.log(payload,"==========payload")
     const response = await userLoginRepo(payload)   // returns user details based on username or email
     if (!response)
         throw new AppError(401, "Invalid Username/Email or Password.", {});
@@ -177,3 +181,51 @@ export const resetPasswordService = async (payload) => {
     }
 
 }
+
+
+export const googleAuthService = async(requestBody) =>{
+    const {clientId, token} = requestBody
+    const clientHandler = new OAuth2Client(clientId); 
+    try{
+        const ticket = await clientHandler.verifyIdToken({
+            idToken: token,
+            audience: clientId
+        })
+        const payload = ticket.getPayload();
+        const userDataPayload = {
+            username: payload.email,
+            email: payload.email,
+            first_name: payload.given_name,
+            last_name: payload.family_name,
+            profile_image: payload.picture,
+        }
+        const userOAuthPayload = {
+            provider_identifier: 'google',
+            provider_user_id: payload.sub,
+        }
+        if(userOAuthPayload && payload.email_verified){
+            const userResponse = await checkEmailStatusRepo(userOAuthPayload, userDataPayload)
+            if (userResponse){
+                // generate jwt token
+                const {access_token, refresh_token} = generateToken({
+                    sub: userResponse.user_id,
+                    username: userResponse.username
+                })
+                return {
+                    user: userResponse,
+                    refresh_token,
+                    access_token
+                }
+            }else{
+                // register new user
+                const registerResp = await userRegisterRepo(userDataPayload)
+                return {
+                    records: registerResp
+                }
+            }
+        }
+    }catch(err){
+        throw err
+    }
+}
+

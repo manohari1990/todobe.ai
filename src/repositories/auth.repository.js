@@ -39,6 +39,7 @@ export const checkDuplicateUser = async (email, username) => {
 
 export const userLoginRepo = async (payload) => {
     const sql = `SELECT ${NEW_UPDATE_USER_RETURN_FROM_DB.join(", ")}, password_hash FROM users WHERE email = $1 OR username = $1`
+    console.log(sql, "=================sql")
     try {
         const response = await query(sql, [payload.login])
         if (response.rowCount > 0)
@@ -138,6 +139,34 @@ export const updateResetPasswordTable = async (payload, id) => {
         const response = await query(sql, newValues)
         return response.rows[0]
     } catch (err) {
+        throw err
+    }
+}
+
+export const checkEmailStatusRepo = async (userOAuthPayload, userDataPayload) => {
+    try{
+        let sql = `SELECT * FROM user_oauth_accounts WHERE provider_user_id = $1`
+        const oauthReord = await query(sql, [userOAuthPayload.provider_user_id])
+        if(oauthReord.rowCount > 0){
+            return oauthReord.rows[0];
+        }else{
+            sql = `SELECT ${NEW_UPDATE_USER_RETURN_FROM_DB.join(', ')} FROM users WHERE email = $1`
+            const userRecord = await query(sql, [userDataPayload.email])
+            if(userRecord.rowCount > 0){
+                const {sql, values} = buildInsertQuery({
+                    ...userOAuthPayload,
+                    user_id: userRecord.rows[0].user_id
+                }, 'user_oauth_accounts')
+                const insertOAuthRecord = await query(sql, values)
+                return {
+                    ...insertOAuthRecord.rows[0],
+                    ...userRecord.rows[0]
+                };
+            }else{
+                // return register
+            }
+        }
+    }catch(err){
         throw err
     }
 }
