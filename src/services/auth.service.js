@@ -15,9 +15,11 @@ import {
 import bcrypt from "bcrypt";
 import { AppError } from "../config/AppError.js"
 import { generateToken, verifyToken } from '../utils/jwt.js';
+import {oauthPreparePayload} from '../utils/helpers.js';
 import { SendEmail } from '../config/EmailService.js';
 import crypto from 'crypto';
-import {OAuth2Client} from 'google-auth-library'
+import { OAuth2Client } from 'google-auth-library'
+import axios from 'axios';
 
 export const userRegisterService = async (payload) => {
     // Check duplicate - select query compare email, username, loop through the result and response back with existing username & email
@@ -52,7 +54,7 @@ export const userRegisterService = async (payload) => {
 }
 
 export const loginService = async (payload) => {
-    console.log(payload,"==========payload")
+    console.log(payload, "==========payload")
     const response = await userLoginRepo(payload)   // returns user details based on username or email
     if (!response)
         throw new AppError(401, "Invalid Username/Email or Password.", {});
@@ -82,7 +84,7 @@ export const forgotPasswordService = async (request) => {
                 ...response.records,
                 ip_address: request.ip
             }, "FORGOT_PASSWORD")
-            if(infoId){
+            if (infoId) {
                 return {
                     success: true,
                     message: 'Reset Password link sent to your registered email-id.'
@@ -160,7 +162,7 @@ export const resetPasswordService = async (payload) => {
                 message: 'Token might expired! Try forget password again.'
             }
         }
-        
+
         // Hash password - using bcrypt convert the password into hash and append the it to the payload
         const hashedPassword = await bcrypt.hash(payload.password, 10)
         // update new password in users table
@@ -168,7 +170,7 @@ export const resetPasswordService = async (payload) => {
         // then update the used_at in user_password_reset_tokens table
         if (updatedUserPassword) {
             const updatedUserResetPassword = await updateResetPasswordTable({ used_at: new Date(Date.now()) }, tokenData.reset_id)
-            if(updatedUserResetPassword){
+            if (updatedUserResetPassword) {
                 return {
                     success: true,
                     message: 'Password updated!'
@@ -182,10 +184,10 @@ export const resetPasswordService = async (payload) => {
 }
 
 
-export const googleAuthService = async(requestBody) =>{
-    const {clientId, token} = requestBody
-    const clientHandler = new OAuth2Client(clientId); 
-    try{
+export const googleAuthService = async (requestBody) => {
+    const { clientId, token } = requestBody
+    const clientHandler = new OAuth2Client(clientId);
+    try {
         const ticket = await clientHandler.verifyIdToken({
             idToken: token,
             audience: clientId
@@ -202,12 +204,12 @@ export const googleAuthService = async(requestBody) =>{
             provider_identifier: 'google',
             provider_user_id: payload.sub,
         }
-        if(userOAuthPayload && payload.email_verified){
+        if (userOAuthPayload && payload.email_verified) {
             const userResponse = await checkEmailStatusRepo(userOAuthPayload, userDataPayload)
-            if (userResponse){
+            if (userResponse) {
                 // user email is already existed
                 // generate jwt token
-                const {access_token, refresh_token} = generateToken({
+                const { access_token, refresh_token } = generateToken({
                     sub: userResponse.user_id,
                     username: userResponse.username
                 })
@@ -216,16 +218,16 @@ export const googleAuthService = async(requestBody) =>{
                     refresh_token,
                     access_token
                 }
-            }else{
+            } else {
                 // user email is not existed - register as new user
                 const registerResp = await userRegisterRepo(userDataPayload)
-                if(registerResp.records){
+                if (registerResp.records) {
                     const newOAuthRecord = await userOAuthSaveRepo({
                         ...userOAuthPayload,
                         user_id: registerResp.records.user_id
                     })
-                    if(newOAuthRecord){
-                        const {access_token, refresh_token} = generateToken({
+                    if (newOAuthRecord) {
+                        const { access_token, refresh_token } = generateToken({
                             sub: registerResp.records.user_id,
                             username: registerResp.records.username
                         })
@@ -236,11 +238,90 @@ export const googleAuthService = async(requestBody) =>{
                         }
                     }
                 }
-                
             }
         }
-    }catch(err){
+    } catch (err) {
         throw err
     }
 }
 
+
+export const gitHubLoginService = async (code) => {
+    try {
+        // 1. get Tokens from Github
+        const githubToken = await axios.post(
+            'https://github.com/login/oauth/access_token',
+            {
+                "client_id": 'Ov23liX4g9lQnD8o2SxJ',
+                "client_secret": "bb60d1b7deb260e73ece15383447a2aada6bb7b9",
+                "code": code
+            }, {
+            headers: {
+                Accept: "application/json"
+            }
+        })
+        if (githubToken.status !== 200)
+            throw new Error("GitHub authentication failed. Please try again!")
+        const tokenData = githubToken.data
+        console.log(tokenData,"=================tokenData")
+        // 2. get User details using tokens
+        const githubOAuthResponse = await axios.get('https://api.github.com/user',
+            {
+                headers: {
+                    Authorization: `${tokenData.token_type} ${tokenData.access_token}`
+                }
+            }
+        )
+        if (githubOAuthResponse.status !== 200)
+            throw new Error("GitHub authentication failed. Please try again!")
+
+        const { userDataPayload, userOAuthPayload } = oauthPreparePayload(githubOAuthResponse.data, 'github')
+        console.log(userDataPayload, userOAuthPayload,"==================userDataPayload, userOAuthPayload")
+        if (githubOAuthResponse.data) {
+            // 3. check if provider email is existed
+            const userResponse = await checkEmailStatusRepo(userOAuthPayload, userDataPayload)
+            console.log(userResponse,"=================userResponse")
+            const { user, refresh_token, access_token } = await authenticateUser(userResponse, userDataPayload, userOAuthPayload)
+            console.log({ user, refresh_token, access_token },"============={ user, refresh_token, access_token } ")
+            return { user, refresh_token, access_token }
+        }
+    } catch (err) {
+        throw err
+    }
+}
+
+const authenticateUser = async (userResponse, userDataPayload, userOAuthPayload) => {
+    if (userResponse) {
+        // user email is already existed
+        // generate jwt token
+        const { access_token, refresh_token } = generateToken({
+            sub: userResponse.user_id,
+            username: userResponse.username
+        })
+        return {
+            user: userResponse,
+            refresh_token,
+            access_token
+        }
+    } else {
+        // user email is not existed - register as new user
+        const registerResp = await userRegisterRepo(userDataPayload)
+        if (registerResp.records) {
+            const newOAuthRecord = await userOAuthSaveRepo({
+                ...userOAuthPayload,
+                user_id: registerResp.records.user_id
+            })
+            if (newOAuthRecord) {
+                const { access_token, refresh_token } = generateToken({
+                    sub: registerResp.records.user_id,
+                    username: registerResp.records.username
+                })
+                return {
+                    user: registerResp.records,
+                    refresh_token,
+                    access_token
+                }
+            }
+        }
+    }
+}

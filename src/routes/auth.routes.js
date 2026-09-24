@@ -6,7 +6,8 @@ import {
     refreshAuthToken,
     forgotPassword,
     resetPassword,
-    googleAuthController
+    googleAuthController,
+    githubAuthController
 } from '../controllers/auth.controller.js';
 import { body } from "express-validator";
 
@@ -50,5 +51,5 @@ authRouter.post('/forgotpassword', forgotPassword)
 authRouter.post('/resetpassword/:token', resetPassword)
 // Google OAuth handler
 authRouter.post('/googleauth', googleAuthController)
-
+authRouter.post('/githubLogin', githubAuthController)
 export default authRouter

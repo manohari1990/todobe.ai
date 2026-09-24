@@ -7,7 +7,8 @@ import {
     refreshAuthService,
     forgotPasswordService,
     resetPasswordService,
-    googleAuthService
+    googleAuthService,
+    gitHubLoginService
 } from '../services/auth.service.js'
 import { validationResult } from "express-validator";
 import { buildSessionMetadata } from '../utils/helpers.js'
@@ -139,7 +140,52 @@ export const googleAuthController = async (req, res) =>{
             error: err
         })
     }
+}
 
+export const githubAuthController = async (req, res) => {
+    try{
+        const requestParams = req.query
+        console.log(requestParams.code,"============code")
+        const { user, refresh_token, access_token } = await gitHubLoginService(requestParams.code)
+        const userRequestDetails = buildSessionMetadata(req)
+        const user_session = await saveUserSessionService({ ...userRequestDetails, 'refresh_token_hash': refresh_token, 'user_id': user.user_id }) 
+        res.cookie(
+            'access_token', access_token,
+            {
+                httpOnly: true,
+                sameSite: 'lax',
+                maxAge: process.env.JWT_ACCESS_COOKIE_MAX_AGE,
+                secure: false
+            }
+        )
+        res.cookie(
+            'refresh_token', refresh_token,
+            {
+                httpOnly: true,
+                sameSite: 'lax',
+                maxAge: process.env.JWT_REFRESH_COOKIE_MAX_AGE,
+                secure: false
+            }
+        )
+        return res.status(200).json({
+            success: true,
+            message: "Login Successfully!",
+            records: [user]
+        })
+    }catch(err){
+        if(err instanceof AppError){
+            return res.status(err.statusCode).json({
+                success: false,
+                error: err.error,
+                message: err.message
+            })
+        }
+        return res.status(500).json({
+            success: 500,
+            message: 'Internal server error',
+            error: err
+        })
+    }
 }
 
 export const userLogout = async (req, res) => {

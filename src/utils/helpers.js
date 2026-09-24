@@ -65,6 +65,34 @@ export const generateTokenHash = () => {
     return { resetToken, hashedToken }
 }
 
+export const oauthPreparePayload = (userOAuthResponse, providerName) => {
+    console.log(userOAuthResponse.given_name || userOAuthResponse.name,"=================name")
+    console.log(userOAuthResponse.picture ||  userOAuthResponse.avatar_url,"=================image")
+    const userDataPayload = {
+        username: getUserName(userOAuthResponse, providerName),
+        email: userOAuthResponse.email,
+        first_name: userOAuthResponse.given_name || userOAuthResponse.name,
+        last_name: userOAuthResponse.family_name || userOAuthResponse.name,
+        profile_image: userOAuthResponse.picture ||  userOAuthResponse.avatar_url,
+    }
+    const userOAuthPayload = {
+        provider_identifier: providerName,
+        provider_user_id: userOAuthResponse.sub || userOAuthResponse.node_id,
+    }
+    return {userDataPayload, userOAuthPayload}
+}
+
+const getUserName=(userData, providerName)=>{
+    switch(providerName){
+        case 'google':
+            return userData.email
+        case 'github':
+            return `${userData.login}_${userData.id}`
+    }
+}
+
+
+
 // export const setCookies =(res, cookieTitle, cookieValue ) =>{
 //     res.cookie(
 //         cookieTitle,cookieValue,
