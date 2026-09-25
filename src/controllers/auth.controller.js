@@ -145,7 +145,6 @@ export const googleAuthController = async (req, res) =>{
 export const githubAuthController = async (req, res) => {
     try{
         const requestParams = req.query
-        console.log(requestParams.code,"============code")
         const { user, refresh_token, access_token } = await gitHubLoginService(requestParams.code)
         const userRequestDetails = buildSessionMetadata(req)
         const user_session = await saveUserSessionService({ ...userRequestDetails, 'refresh_token_hash': refresh_token, 'user_id': user.user_id }) 

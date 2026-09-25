@@ -4,7 +4,7 @@ import todoRouter from './routes/todo.routes.js';
 import authRouter from './routes/auth.routes.js';
 import userRouter from './routes/user.routes.js';
 import cookieParser from 'cookie-parser'
-import { githubAuthController } from './controllers/auth.controller.js';
+import commonRouter from './routes/common.routes.js';
 
 const app = express()
 
@@ -26,7 +26,7 @@ app.get('/', (req, res) => {
 app.use('/todos', todoRouter)
 app.use('/auth', authRouter)
 app.use('/user', userRouter)
-
+app.use('/common', commonRouter)
 app.use((req, res) => {
     res.status(404).json({
         'message': 'Invalue route'

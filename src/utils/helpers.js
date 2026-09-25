@@ -66,8 +66,6 @@ export const generateTokenHash = () => {
 }
 
 export const oauthPreparePayload = (userOAuthResponse, providerName) => {
-    console.log(userOAuthResponse.given_name || userOAuthResponse.name,"=================name")
-    console.log(userOAuthResponse.picture ||  userOAuthResponse.avatar_url,"=================image")
     const userDataPayload = {
         username: getUserName(userOAuthResponse, providerName),
         email: userOAuthResponse.email,
@@ -91,26 +89,3 @@ const getUserName=(userData, providerName)=>{
     }
 }
 
-
-
-// export const setCookies =(res, cookieTitle, cookieValue ) =>{
-//     res.cookie(
-//         cookieTitle,cookieValue,
-//         {
-//             'httpOnly': true,
-//             'sameSite': 'lax',
-//             'maxAge': process.env.JWT_ACCESS_COOKIE_MAX_AGE,
-//             'secure': false
-//         }
-//     )
-//     res.cookie(
-//         cookieTitle,cookieValue,
-//         {
-//             'httpOnly': true,
-//             'sameSite': 'lax',
-//             'maxAge': process.env.JWT_REFRESH_COOKIE_MAX_AGE,
-//             'secure': false
-//         }
-//     )
-//     return res
-// }

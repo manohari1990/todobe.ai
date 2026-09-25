@@ -15,7 +15,7 @@ import {
 import bcrypt from "bcrypt";
 import { AppError } from "../config/AppError.js"
 import { generateToken, verifyToken } from '../utils/jwt.js';
-import {oauthPreparePayload} from '../utils/helpers.js';
+import { oauthPreparePayload } from '../utils/helpers.js';
 import { SendEmail } from '../config/EmailService.js';
 import crypto from 'crypto';
 import { OAuth2Client } from 'google-auth-library'
@@ -99,6 +99,7 @@ export const forgotPasswordService = async (request) => {
 export const saveUserSessionService = async (payload) => {
     const updatedPayload = {
         ...payload,
+        ip_address: payload.ip_address || '0.0.0.0',
         refresh_token_hash: await bcrypt.hash(payload.refresh_token_hash, 10)       // hash the refresh token to safely store into DB
     }
     try {
@@ -263,7 +264,6 @@ export const gitHubLoginService = async (code) => {
         if (githubToken.status !== 200)
             throw new Error("GitHub authentication failed. Please try again!")
         const tokenData = githubToken.data
-        console.log(tokenData,"=================tokenData")
         // 2. get User details using tokens
         const githubOAuthResponse = await axios.get('https://api.github.com/user',
             {
@@ -276,13 +276,10 @@ export const gitHubLoginService = async (code) => {
             throw new Error("GitHub authentication failed. Please try again!")
 
         const { userDataPayload, userOAuthPayload } = oauthPreparePayload(githubOAuthResponse.data, 'github')
-        console.log(userDataPayload, userOAuthPayload,"==================userDataPayload, userOAuthPayload")
         if (githubOAuthResponse.data) {
             // 3. check if provider email is existed
             const userResponse = await checkEmailStatusRepo(userOAuthPayload, userDataPayload)
-            console.log(userResponse,"=================userResponse")
             const { user, refresh_token, access_token } = await authenticateUser(userResponse, userDataPayload, userOAuthPayload)
-            console.log({ user, refresh_token, access_token },"============={ user, refresh_token, access_token } ")
             return { user, refresh_token, access_token }
         }
     } catch (err) {
@@ -299,7 +296,10 @@ const authenticateUser = async (userResponse, userDataPayload, userOAuthPayload)
             username: userResponse.username
         })
         return {
-            user: userResponse,
+            user: {
+                ...userResponse,
+                ...userDataPayload
+            },
             refresh_token,
             access_token
         }
@@ -317,7 +317,10 @@ const authenticateUser = async (userResponse, userDataPayload, userOAuthPayload)
                     username: registerResp.records.username
                 })
                 return {
-                    user: registerResp.records,
+                    user: {
+                        ...registerResp.records,
+                        ...userDataPayload
+                    },
                     refresh_token,
                     access_token
                 }
